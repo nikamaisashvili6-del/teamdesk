@@ -7,6 +7,8 @@ English and Georgian.
 
 ![Overview](docs/overview.png)
 
+**Live demo:** https://nikamaisashvili6-del.github.io/teamdesk/
+
 ## What's in it
 
 - **Overview and department tabs.** Every department gets the same page, filtered

@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TeamDesk</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' aria-hidden='true'><rect width='32' height='32' rx='9' fill='%239fe3d3'/><path d='M9 11.5h14M16 11.5V23' stroke='%2310151a' stroke-width='3.2' stroke-linecap='round'/></svg>">
+<meta name="description" content="TeamDesk: a small-company HR dashboard demo with calendar, budget requests and a candidate scorecard.">
+<style>
+:root{--bg:#18191f;--panel:#22232b;--tile:#1b1c22;--line:#2d2e37;--line2:#393a45;--fg:#e8e9ee;--muted:#8a8c99;
+  --acc:#9fe3d3;--accd:#10151a;--orange:#f2b33d;--blue:#3aa7e6;--pink:#e7b8dc;--red:#f07b7b;--head:60px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,"Segoe UI",Roboto,"Noto Sans Georgian",sans-serif;font-size:14px}
+a{cursor:pointer;text-decoration:none;color:inherit}button{font:inherit;color:inherit;cursor:pointer}
+p{margin:2px 0}.muted{color:var(--muted)}
+h2{margin:0 0 12px;font-size:15px;font-weight:700}
+.card{background:var(--panel);border-radius:16px;padding:16px 18px;min-height:0;min-width:0}
+.sub{font-size:12px;color:var(--muted);margin:-9px 0 10px}
+
+/* ---------- header: badge + folder tabs ---------- */
+.bar{height:var(--head);display:flex;align-items:flex-end;gap:22px;padding:0 24px;background:#141519;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;white-space:nowrap;align-self:center}
+.brand svg{height:30px;width:30px;flex:none}
+.tabs{display:flex;gap:2px;align-self:stretch;align-items:flex-end;flex:1}
+.tab{position:relative}.tab.right{margin-left:auto}
+.tab>a{display:flex;align-items:center;gap:7px;padding:9px 15px 11px;margin-bottom:-1px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;white-space:nowrap;font-size:13px;color:var(--muted)}
+.tab>a svg{width:16px;height:16px;flex:none}
+.tab>a:hover{color:var(--fg)}
+.tab.on>a{background:var(--bg);border-color:var(--acc);color:var(--acc)}
+.pop{display:none;position:absolute;left:50%;top:100%;transform:translateX(-50%);padding-top:8px;z-index:30}
+.pop a{display:flex;flex-direction:column;align-items:center;gap:7px;width:160px;padding:14px 10px;background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.55);text-align:center;font-size:12.5px}
+.pop a:hover{border-color:var(--acc)}
+.tab:hover .pop{display:block}.tab.on:hover .pop{display:none}
+
+/* ---------- page layout: fits one screen ---------- */
+main{height:calc(100vh - var(--head));display:flex;flex-direction:column;gap:14px;padding:16px 24px;max-width:1880px;margin:0 auto}
+.row1{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:14px;flex:none}
+.row2{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr) minmax(0,1fr);gap:14px;flex:1;min-height:0}
+.col{display:flex;flex-direction:column;gap:14px;min-height:0}
+.col>.card{overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.hello{display:flex;align-items:center;gap:14px}
+.hello h1{margin:0;font-size:21px}.hello .who h1{font-size:16px;line-height:1.3}
+.stat{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.ic{width:42px;height:42px;border-radius:12px;background:var(--tile);display:grid;place-items:center;flex:none}
+.ic svg{width:22px;height:22px}
+.stat b{display:block;font-size:22px;white-space:nowrap}.stat b small{font-size:14px;color:var(--muted);font-weight:500}
+.stat span{display:block;color:var(--muted);font-size:12.5px}.stat em{display:block;font-style:normal;font-size:11px;margin-top:2px}
+.stat.link{cursor:pointer;transition:box-shadow .15s,background .15s;box-shadow:inset 0 0 0 1px rgba(159,227,211,.35)}.stat.link:hover{background:#262830;box-shadow:inset 0 0 0 1px var(--acc)}
+.stat .go{margin-left:auto;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:var(--accd);flex:none;transition:transform .15s}.stat .go svg{width:18px;height:18px;stroke-width:2.4}
+.stat.link:hover .go{transform:translateX(3px)}@keyframes nudge{0%,80%,100%{transform:translateX(0)}88%{transform:translateX(4px)}}.stat .go{animation:nudge 3.5s ease-in-out infinite}
+
+.badge{width:var(--s);height:var(--s);border-radius:30%;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);flex:none}
+.badge svg{width:55%;height:55%}
+.lang{align-self:center;margin-left:auto;background:var(--tile);border:1px solid var(--line2);border-radius:9px;padding:4px 11px;font-size:12.5px;color:var(--muted)}
+.lang:hover{color:var(--fg);border-color:var(--acc)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* ---------- calendar ---------- */
+.calcard{display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.nav{display:flex;align-items:center;gap:6px}
+.nb{background:var(--tile);border:1px solid var(--line);border-radius:9px;padding:4px 11px;font-size:13px}.nb:hover{border-color:var(--acc)}
+.ctitle{font-weight:700;font-size:16px;min-width:150px;text-align:center}
+.views{display:flex;background:var(--tile);border-radius:10px;padding:3px}
+.views button{background:none;border:none;padding:4px 13px;font-size:12.5px;color:var(--muted);border-radius:8px}
+.views button.on{background:var(--acc);color:var(--accd);font-weight:700}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{display:flex;align-items:center;gap:6px;padding:3px 10px;border:none;border-radius:20px;font-size:11.5px;color:var(--muted);background:var(--tile)}
+.chip i{width:7px;height:7px;border-radius:50%}.chip.off{opacity:.35}
+.grid{display:flex;flex-direction:column;flex:1;min-height:0;gap:4px}
+.dows{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dow{font-size:11px;color:var(--muted);text-align:center;font-weight:600;padding:2px 0}
+.week{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;flex:1;min-height:64px}
+.day{min-width:0;background:var(--tile);border-radius:9px;padding:5px;overflow:hidden;cursor:pointer;transition:background .12s}
+.day:hover{background:#202129}.day.out{opacity:.35}
+.day.sel{box-shadow:inset 0 0 0 1px var(--line2)}
+.dn{font-size:12px;color:#a9abb8;display:inline-block;padding:1px 6px;font-variant-numeric:tabular-nums}
+.day.today{box-shadow:inset 0 0 0 2px var(--acc);background:#1d2626}
+.day.today .dn{background:var(--acc);color:var(--accd);font-weight:800;border-radius:9px}
+.evs{margin-top:calc(var(--bars,0) * 20px + 2px)}
+.er{display:flex;align-items:flex-start;gap:5px;padding:2px 5px;margin-bottom:3px;border-radius:6px;font-size:11px;line-height:1.3;background:rgba(232,233,238,.05)}
+.er:hover{background:rgba(232,233,238,.11)}
+.er .dot{width:6px;height:6px;border-radius:50%;flex:none;margin-top:4px}
+.er .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.more{font-size:10.5px;color:var(--muted);padding-left:6px}
+.slide-r{animation:sr .22s cubic-bezier(.25,.8,.25,1)}.slide-l{animation:sl .22s cubic-bezier(.25,.8,.25,1)}
+@keyframes sr{from{opacity:0;transform:translateX(20px)}}@keyframes sl{from{opacity:0;transform:translateX(-20px)}}
+.daypanel{margin-top:8px;padding:8px 12px;background:var(--tile);border-radius:10px;font-size:12.5px;flex:none}
+.daypanel b{margin-right:8px}.daypanel .it{display:inline-flex;align-items:center;gap:5px;margin-right:14px}
+.agenda{overflow:auto;flex:1}.ag-d{font-size:12px;color:var(--muted);margin:10px 0 4px}
+.ag-e{display:flex;gap:10px;align-items:center;padding:8px 11px;background:var(--tile);border-radius:9px;margin-bottom:4px}
+.ag-e .dot{width:8px;height:8px;border-radius:50%}.ag-e .tm{font-size:12px;color:#a9abb8;width:90px;font-variant-numeric:tabular-nums}
+#tip{position:fixed;z-index:50;display:none;pointer-events:none;width:230px;background:#101116;border:1px solid var(--line2);border-radius:11px;padding:10px 12px;font-size:12px;box-shadow:0 12px 26px rgba(0,0,0,.6)}
+#tip b{display:block;font-size:13px;margin-bottom:3px}
+
+/* ---------- budget ---------- */
+.budget{display:flex;flex-direction:column}
+.total{text-align:center}.total b{font-size:28px}.total b small{color:var(--muted);font-size:17px;font-weight:500}
+.total span{display:block;font-size:12px;color:var(--muted)}
+.donut{position:relative;width:190px;height:190px;margin:8px auto 12px;flex:none}
+.donut svg{width:100%;height:100%;transform:rotate(-90deg)}
+.donut circle.seg{fill:none;stroke-width:28;transition:stroke-width .15s}
+.donut circle.seg:hover{stroke-width:34}
+.donut .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none;padding:0 38px;overflow-wrap:anywhere}
+.donut .mid b{font-size:13px;line-height:1.25}.donut .mid span{font-size:11.5px;color:var(--muted)}
+.blist{display:flex;flex-direction:column;gap:5px}
+.brow{display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--tile);border-radius:9px;font-size:12.5px}
+.brow .dot{width:8px;height:8px;border-radius:50%;flex:none}.brow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .am{font-size:12px;color:#a9abb8;white-space:nowrap;font-variant-numeric:tabular-nums}
+.st{width:7px;height:7px;border-radius:50%;flex:none}.st.bought{background:var(--acc)}.st.collecting{background:var(--orange)}.st.needed{background:#4a4c58}
+.btn{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:7px 14px;border-radius:10px;border:none;background:var(--acc);color:var(--accd);font-weight:700;font-size:13px;align-self:flex-start}
+.btn svg{width:15px;height:15px}
+.addreq{display:flex;gap:6px;margin-top:12px}.addreq[hidden],.btn[hidden]{display:none}.addreq .inp[type=number]{width:110px;flex:none}.btn.ghost{background:var(--tile);color:var(--fg)}
+
+/* ---------- announcements, to-do, people ---------- */
+.ann{background:var(--tile);border-left:3px solid var(--line2);padding:8px 11px;border-radius:8px;margin:6px 0}
+.ann.pin{border-left-color:var(--orange)}.ann .tag{font-size:10.5px;color:var(--orange)}
+.todo{display:flex;align-items:flex-start;gap:10px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:13px}
+.todo input{accent-color:var(--acc);margin-top:3px;width:15px;height:15px;flex:none}
+.todo.done .tx{text-decoration:line-through;color:var(--muted)}.todo .meta{font-size:11px;color:var(--muted)}
+.inp{background:var(--tile);border:1px solid var(--line);border-radius:9px;padding:7px 10px;color:var(--fg);font:inherit;font-size:13px;width:100%}
+.inp:focus{outline:none;border-color:var(--acc)}
+.addtodo{display:flex;gap:6px;margin-top:10px}
+.pp{display:flex;gap:10px;align-items:center;padding:5px 0}.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--tile);color:var(--acc);flex:none}
+
+/* ---------- recruits page ---------- */
+.rgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;flex:1;min-height:0}
+.rlist{display:flex;flex-direction:column;overflow:hidden}
+.rtools{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.rtools .inp{flex:1;min-width:160px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+.tbl{overflow:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.r{cursor:pointer}tr.r:hover td{background:#26272f}tr.r.on td{background:#232c2b}
+.tags{display:flex;gap:4px;flex-wrap:wrap}.tg{font-size:11px;padding:2px 8px;border-radius:12px;background:var(--tile)}
+.tg.good{color:var(--acc)}.tg.lack{color:var(--orange)}
+.pot{font-size:11.5px;padding:3px 9px;border-radius:8px;font-weight:600;white-space:nowrap}
+.pot.yes{background:rgba(159,227,211,.15);color:var(--acc)}.pot.maybe{background:rgba(242,179,61,.15);color:var(--orange)}.pot.no{background:rgba(138,140,153,.15);color:var(--muted)}
+.mini{display:flex;gap:3px;align-items:flex-end;height:22px}.mini i{width:6px;border-radius:2px;background:var(--acc)}
+.form{overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fl{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+.picks{display:flex;gap:5px;flex-wrap:wrap}
+.pick{font-size:12px;padding:4px 10px;border-radius:14px;background:var(--tile);border:1px solid var(--line);color:var(--muted)}
+.pick.good.on{border-color:var(--acc);color:var(--acc);background:rgba(159,227,211,.1)}
+.pick.lack.on{border-color:var(--orange);color:var(--orange);background:rgba(242,179,61,.1)}
+.rate{display:grid;grid-template-columns:130px 1fr 18px;align-items:center;gap:10px;font-size:12.5px;margin:4px 0}
+.rate input{accent-color:var(--acc)}
+.seg3{display:flex;background:var(--tile);border-radius:10px;padding:3px}
+.seg3 button{flex:1;background:none;border:none;padding:6px;border-radius:8px;font-size:12.5px;color:var(--muted)}
+.seg3 button.on{background:var(--acc);color:var(--accd);font-weight:700}
+textarea.inp{resize:vertical;min-height:60px}
+.factions{display:flex;gap:8px;align-items:center}
+.saved{font-size:12px;color:var(--acc);margin-top:12px}
+
+@media(max-width:1760px){.tab>a{padding:9px 10px 11px;gap:6px}.bar{gap:14px}}
+@media(max-width:1560px){.tab>a svg{display:none}.tab>a{font-size:12.5px}}
+@media(max-width:1300px){.brand span{display:none}.tab>a{padding:9px 8px 11px;font-size:12px}}
+@media(max-width:1100px){
+  :root{--head:auto}
+  .bar{height:auto;flex-direction:column;align-items:flex-start;padding:10px 16px 0;gap:8px}
+  .tabs{overflow-x:auto;max-width:100%;scrollbar-width:none}.tab:hover .pop{display:none}.tab.right{margin-left:0}.lang{position:absolute;top:10px;right:16px}
+  main{height:auto;padding:12px}.row1{grid-template-columns:1fr}
+  .row2,.rgrid{grid-template-columns:1fr}.col>.card{overflow:visible}.week{min-height:54px}.er .nm{display:none}
+  .tbl{overflow:visible}td:nth-child(3),th:nth-child(3),td:nth-child(5),th:nth-child(5){display:none}
+}
+</style></head>
+<body>
+
+<div class="bar">
+  <a class="brand" href="?"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#9fe3d3"/><path d="M9 11.5h14M16 11.5V23" stroke="#10151a" stroke-width="3.2" stroke-linecap="round"/></svg><span>TeamDesk</span></a>
+  <nav class="tabs" id="tabs"></nav>
+  <button class="lang" id="lang" type="button"></button>
+</div>
+<main id="main"></main>
+<div id="tip"></div>
+<script>
+// TeamDesk demo. All data below is made up and lives in this file; candidates you add
+// are kept in this browser only (localStorage). A real deployment would load it from an API.
+
+// ---------- language ----------
+let LANG = "en";
+try { LANG = localStorage.getItem("teamdesk.lang") || "en"; } catch (_) {}
+document.documentElement.lang = LANG;
+const tr = x => Array.isArray(x) ? x[LANG === "ka" ? 1 : 0] : x;   // [english, georgian] or a plain string
+const T = {
+  overview: ["Overview", "მიმოხილვა"], hello: ["Hello, Alex!", "გამარჯობა, Alex!"], head: ["Head", "ხელმძღვანელი"],
+  candidates: ["Candidates", "კანდიდატები"], inPipeline: ["candidates in the hiring pipeline", "კანდიდატი დაქირავების პროცესში"],
+  anns: ["Announcements", "განცხადებები"], tasks: ["Tasks", "დავალებები"], newTask: ["New task…", "ახალი დავალება…"],
+  heads: ["Department heads", "ხელმძღვანელები"], team: ["Team", "გუნდი"], headRole: ["Head of department", "დეპარტამენტის ხელმძღვანელი"],
+  leadRole: ["Team lead", "გუნდის ლიდერი"], company: ["Company", "კომპანია"], wholeCompany: ["Whole company", "მთელი კომპანია"],
+  pinned: ["Pinned", "მიმაგრებული"], today: ["Today", "დღეს"], upcoming: ["Upcoming", "მომავალი"], month: ["Month", "თვე"],
+  list: ["List", "სია"], more: ["more", "მეტი"], noEvents: ["No events", "ღონისძიება არ არის"],
+  budget: ["Budget", "ბიუჯეტი"], budgetSub: ["Funding by purchase request", "დაფინანსება მოთხოვნების მიხედვით"],
+  fundedOf: ["funded / requested", "დაფინანსებული / მოთხოვნილი"], funded: ["funded", "დაფინანსებულია"],
+  addReq: ["Add request", "მოთხოვნის დამატება"], reqName: ["What is needed?", "რა არის საჭირო?"], amount: ["Amount", "თანხა"], add: ["Add", "დამატება"],
+  autumn: ["Autumn hiring", "შემოდგომის დაქირავება"], records: ["records", "ჩანაწერი"], search: ["Search by name or skill…", "ძებნა სახელით, უნარით…"],
+  allRec: ["All recommendations", "ყველა რეკომენდაცია"], allDept: ["All departments", "ყველა დეპარტამენტი"],
+  name: ["Name", "სახელი"], dept: ["Department", "დეპარტამენტი"], strGaps: ["Strengths / gaps", "ძლიერი / სუსტი"],
+  rec: ["Recommendation", "რეკომენდაცია"], scores: ["Scores", "შეფასება"], noMatch: ["No candidates match.", "ვერაფერი მოიძებნა."],
+  newCand: ["New candidate", "ახალი კანდიდატი"], editCand: ["Edit candidate", "რედაქტირება"], first: ["First name", "სახელი"],
+  last: ["Last name", "გვარი"], exp: ["Experience (years)", "გამოცდილება (წელი)"], phone: ["Phone", "ტელეფონი"],
+  appliedFor: ["Applied for", "დეპარტამენტი"], strengths: ["Strengths", "ძლიერი მხარეები"], gaps: ["Gaps", "გასაუმჯობესებელი"],
+  rating: ["Rating (1–5)", "შეფასება (1–5)"], notes: ["Notes", "შენიშვნები"], notesPh: ["What stood out, what needs work…", "რა გამოირჩეოდა, რა უნდა გაუმჯობესდეს…"],
+  interviewer: ["Interviewer", "ინტერვიუერი"], date: ["Date", "თარიღი"], save: ["Save", "შენახვა"], saved: ["Saved ✓", "შენახულია ✓"],
+  cancel: ["Cancel", "გაუქმება"], days5: ["5 days", "5 დღე"], allDay: ["All day", "მთელი დღე"], h48: ["48 h", "48 სთ"], online: ["Online", "ონლაინ"],
+};
+const t = k => tr(T[k]);
+
+// ---------- made-up company data ----------
+const DEPTS = [["Engineering", "ინჟინერია"], ["Product & Design", "პროდუქტი და დიზაინი"], ["Sales", "გაყიდვები"], ["Marketing", "მარკეტინგი"],
+  ["Customer Support", "მომხმარებელთა მხარდაჭერა"], ["Finance", "ფინანსები"], ["Operations", "ოპერაციები"], ["People & HR", "HR და კადრები"]];
+const SHORT = [["Engineering", "ინჟინერია"], ["Product", "პროდუქტი"], ["Sales", "გაყიდვები"], ["Marketing", "მარკეტინგი"],
+  ["Support", "მხარდაჭერა"], ["Finance", "ფინანსები"], ["Operations", "ოპერაციები"], ["People", "HR"]];
+const UCOL = ["#f07b7b", "#b9a2f5", "#3aa7e6", "#f2b33d", "#7fd18f", "#9fe3d3", "#e8d27a", "#e7b8dc"];
+const ORG_COL = "#f2b33d";
+const HEADS = ["Maya Chen", "Daniel Okafor", "Sofia Rossi", "Liam Walsh", "Hana Novak", "Omar Haddad", "Elena Petrova", "Lucas Moreau"];
+const LEADS = ["Priya Nair", "Tom Becker", "Aiko Tanaka", "Mateo Silva", "Grace Kim", "Noah Fischer", "Zara Ahmed", "Felix Wagner"];
+const MONTHS = [["January", "იანვარი"], ["February", "თებერვალი"], ["March", "მარტი"], ["April", "აპრილი"], ["May", "მაისი"], ["June", "ივნისი"],
+  ["July", "ივლისი"], ["August", "აგვისტო"], ["September", "სექტემბერი"], ["October", "ოქტომბერი"], ["November", "ნოემბერი"], ["December", "დეკემბერი"]];
+const DOWS = [["Mon", "ორშ"], ["Tue", "სამ"], ["Wed", "ოთხ"], ["Thu", "ხუთ"], ["Fri", "პარ"], ["Sat", "შაბ"], ["Sun", "კვი"]];
+const CUR = "$";
+
+const svg = (d, c = "currentColor") => `<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const I_HOME = '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>';
+const I_PEOPLE = '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/><path d="M16 3.5a4 4 0 0 1 0 8M22 21c0-3-2-5.5-5-6.5"/>';
+const I_MONEY = '<rect x="2" y="6" width="20" height="13" rx="3"/><circle cx="12" cy="12.5" r="3"/><path d="M6 9.5v6M18 9.5v6"/>';
+const ICONS = [
+  '<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
+  '<path d="M14 6l4 4-9 9H5v-4z"/><path d="M12 8l4 4"/>',
+  '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  '<path d="M3 10v4h4l7 4V6L7 10z"/><path d="M18 9a4 4 0 0 1 0 6"/>',
+  '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>',
+  I_MONEY,
+  '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+  I_PEOPLE];
+const deptBadge = (i, size) => `<span class="badge" style="--c:${UCOL[i]};--s:${size}px">${svg(ICONS[i])}</span>`;
+
+// Dates are days of the current month (32 = early next month), so the demo never looks stale.
+const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
+const ds = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const day = n => ds(new Date(TODAY.getFullYear(), TODAY.getMonth(), n));
+const short = s => { const d = new Date(s + "T00:00"); return `${d.getDate()} ${tr(MONTHS[d.getMonth()]).slice(0, 3)}`; };
+
+const EVENTS = [  // [title, dept (null = everyone), start, end (multi-day) or null, time, place]
+  [["Sprint planning", "სპრინტის დაგეგმვა"], 0, day(3), null, "10:00–11:30", ["Room Atlas", "ოთახი „ატლასი“"]],
+  [["Weekly all-hands", "ყოველკვირეული შეხვედრა"], null, day(6), null, "16:00", ["Main hall", "მთავარი დარბაზი"]],
+  [["Design review", "დიზაინის განხილვა"], 1, day(9), null, "14:00–15:00", ["Studio", "სტუდია"]],
+  [["Quarterly sales kickoff", "გაყიდვების კვარტალური შეხვედრა"], 2, day(13), null, "09:30–13:00", ["Conference center", "საკონფერენციო ცენტრი"]],
+  [["Campaign launch", "კამპანიის გაშვება"], 3, day(13), null, "12:00", T.online],
+  [["Shift handover", "ცვლის გადაბარება"], 4, day(15), null, "08:00", ["Help desk", "დახმარების ცენტრი"]],
+  [["Month-end close", "თვის დახურვა"], 5, day(16), day(17), T.allDay, ["Finance office", "ფინანსების ოფისი"]],
+  [["Office move planning", "ოფისის გადატანის დაგეგმვა"], 6, day(20), null, "11:00", ["Ops room", "ოპერაციების ოთახი"]],
+  [["Town hall", "საერთო კრება"], null, day(21), null, "17:00–18:30", ["Main hall", "მთავარი დარბაზი"]],
+  [["Interview day", "გასაუბრებების დღე"], 7, day(22), null, "10:00–16:00", ["Room Atlas", "ოთახი „ატლასი“"]],
+  [["Hackathon", "ჰაკათონი"], 0, day(23), day(24), T.h48, ["Lab", "ლაბორატორია"]],
+  [["Onboarding week", "ადაპტაციის კვირა"], null, day(26), day(30), T.days5, ["Training room", "სასწავლო ოთახი"]],
+  [["Customer webinar", "ვებინარი მომხმარებლებისთვის"], 4, day(27), null, "15:00", T.online],
+  [["Team lunch", "გუნდური სადილი"], null, day(29), null, "13:00", ["Cafe Verde", "კაფე „ვერდე“"]],
+  [["Performance reviews start", "შეფასებების დაწყება"], 7, day(33), null, "09:00", ["Room Atlas", "ოთახი „ატლასი“"]],
+];
+const NEEDS = [  // [title, dept (null = everyone), funded, cost]
+  [["Laptops ×4", "ლეპტოპები ×4"], 0, 4800, 6400], [["Design tool licenses", "დიზაინის ლიცენზიები"], 1, 1200, 1200],
+  [["Trade fair booth", "გამოფენის სტენდი"], 2, 900, 3500], [["Ad campaign", "სარეკლამო კამპანია"], 3, 2100, 4000],
+  [["Headsets ×10", "ყურსასმენები ×10"], 4, 600, 600], [["Accounting software", "საბუღალტრო პროგრამა"], 5, 0, 1500],
+  [["Standing desks ×6", "რეგულირებადი მაგიდები ×6"], 6, 1300, 3000], [["Training courses", "სასწავლო კურსები"], 7, 800, 2000],
+  [["Team offsite", "გუნდური გასვლა"], null, 1500, 5000],
+];
+const ANNS = [
+  [["Welcome, new hires", "მივესალმებით ახალ თანამშრომლებს"], ["Onboarding week starts at the end of the month.", "ადაპტაციის კვირა თვის ბოლოს იწყება."], null, true],
+  [["Timesheets due Friday", "ტაბელები პარასკევამდე"], ["Please submit this week's timesheets.", "გთხოვთ, ამ კვირის ტაბელი ჩააბაროთ."], "each", false],
+];
+const TODOS = [  // [title, dept, due day of month, done]
+  [["Approve the hiring plan", "დაქირავების გეგმის დამტკიცება"], null, 24, false], [["Prepare new-hire accounts", "ახალი თანამშრომლების ანგარიშები"], null, 22, true],
+  [["Fix the login bug", "შესვლის შეცდომის გასწორება"], 0, 23, false], [["Finalize onboarding slides", "ადაპტაციის სლაიდების დასრულება"], 1, 13, true],
+  [["Update the sales pipeline", "გაყიდვების ეტაპების განახლება"], 2, 25, false], [["Schedule campaign posts", "კამპანიის პოსტების დაგეგმვა"], 3, 28, false],
+  [["Review support templates", "პასუხების შაბლონების გადახედვა"], 4, 21, false], [["Close the month's books", "თვის ბუღალტერიის დახურვა"], 5, 22, false],
+  [["Order office supplies", "საოფისე ნივთების შეკვეთა"], 6, 27, false], [["Send interview invitations", "მოსაწვევების გაგზავნა"], 7, 26, false],
+];
+
+// ---------- state from the URL ----------
+const params = new URLSearchParams(location.search);
+const PAGE = params.get("page") || "home";
+const UNIT = params.get("u") === null ? null : Number(params.get("u"));
+const mine = x => UNIT === null || x === null || x === UNIT;
+const own = x => UNIT === null || x === UNIT;
+const initials = n => n.split(" ").map(w => w[0]).join("");
+const col = u => u === null ? ORG_COL : UCOL[u];
+const fmt = n => n.toLocaleString("en").replace(/,/g, " ");
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const link = (extra = {}) => "?" + new URLSearchParams(Object.entries(extra).filter(([, v]) => v !== null && v !== undefined)).toString();
+
+// ---------- header ----------
+$("tabs").innerHTML =
+  `<div class="tab${PAGE === "home" && UNIT === null ? " on" : ""}"><a href="?">${svg(I_HOME)}${t("overview")}</a></div>` +
+  SHORT.map((s, i) => `<div class="tab${UNIT === i ? " on" : ""}"><a href="?u=${i}">${svg(ICONS[i])}${tr(s)}</a>` +
+    `<div class="pop"><a href="?u=${i}">${deptBadge(i, 48)}${tr(DEPTS[i])}</a></div></div>`).join("");
+$("lang").textContent = LANG === "ka" ? "EN" : "ქარ";
+$("lang").title = LANG === "ka" ? "English" : "ქართული";
+$("lang").onclick = () => { try { localStorage.setItem("teamdesk.lang", LANG === "ka" ? "en" : "ka"); } catch (_) {} location.reload(); };
+
+let recs;
+const SEED = [
+  { first: "Lucas", last: "Bennett", exp: 4, phone: "+1 555 0101", unit: 0, good: ["py", "prob"], lack: ["comm"], r: [5, 3, 4, 4, 4], pot: "yes", notes: "Clear thinker in the pair-programming task.", by: "Alex Morgan", date: day(10) },
+  { first: "Nora", last: "Kim", exp: 2, phone: "+1 555 0102", unit: 4, good: ["cust", "comm"], lack: ["sql"], r: [3, 5, 4, 3, 4], pot: "maybe", notes: "", by: "Alex Morgan", date: day(10) },
+  { first: "Sam", last: "Patel", exp: 6, phone: "+1 555 0103", unit: 5, good: ["xls", "sql"], lack: ["lead", "team"], r: [4, 2, 2, 3, 3], pot: "no", notes: "Strong with numbers, struggled with the team exercise.", by: "Alex Morgan", date: day(11) },
+  { first: "Iris", last: "Walker", exp: 5, phone: "+1 555 0104", unit: 2, good: ["neg", "comm", "stress"], lack: [], r: [3, 5, 4, 5, 5], pot: "yes", notes: "", by: "Alex Morgan", date: day(11) },
+  { first: "Ben", last: "Ortiz", exp: 1, phone: "+1 555 0105", unit: 1, good: ["prob"], lack: ["own", "eng"], r: [3, 2, 3, 4, 3], pot: "no", notes: "", by: "Alex Morgan", date: day(12) },
+  { first: "Chloe", last: "Martin", exp: 3, phone: "+1 555 0106", unit: 3, good: ["comm", "team"], lack: ["xls"], r: [3, 4, 5, 3, 4], pot: "maybe", notes: "", by: "Alex Morgan", date: day(12) },
+];
+try { recs = JSON.parse(localStorage.getItem("teamdesk.candidates")) || SEED; } catch (_) { recs = SEED; }
+const saveRecs = () => { try { localStorage.setItem("teamdesk.candidates", JSON.stringify(recs)); } catch (_) {} };
+
+if (PAGE === "candidates") candidatesPage(); else homePage();
+
+// =====================================================================
+function homePage() {
+  $("main").innerHTML = `
+  <section class="row1">
+    <div class="card hello" id="hello"></div>
+    <div class="card stat" id="s1"></div>
+  </section>
+  <section class="row2">
+    <div class="card calcard" id="calcard"></div>
+    <div class="col"><div class="card budget" id="budget"></div></div>
+    <div class="col">
+      <div class="card"><h2>${t("anns")}</h2><div id="anns"></div></div>
+      <div class="card"><h2>${t("tasks")}</h2><div id="todos"></div>
+        <form class="addtodo" id="addtodo"><input class="inp" placeholder="${t("newTask")}"><button class="nb" type="submit">+</button></form></div>
+      <div class="card"><h2 id="pptitle">${t("heads")}</h2><div id="people"></div></div>
+    </div>
+  </section>`;
+
+  $("hello").innerHTML = UNIT === null ? `<h1>${t("hello")}</h1>`
+    : `${deptBadge(UNIT, 44)}<div class="who"><h1>${tr(DEPTS[UNIT])}</h1><p class="muted">${t("head")}: ${HEADS[UNIT]}</p></div>`;
+  document.title = UNIT === null ? "TeamDesk" : `${tr(DEPTS[UNIT])} · TeamDesk`;
+
+  // one stat card: the hiring pipeline, opens the candidates page (filtered on a department page)
+  const n = recs.filter(r => own(r.unit)).length;
+  $("s1").innerHTML = `<div class="ic">${svg(I_PEOPLE, "var(--acc)")}</div><div><b>${n}</b><span>${t("inPipeline")}</span></div>` +
+    `<span class="go">${svg('<path d="M9 6l6 6-6 6"/>')}</span>`;
+  $("s1").classList.add("link");
+  $("s1").title = t("candidates");
+  $("s1").onclick = () => location.search = link({ page: "candidates", u: UNIT });
+
+  calendar();
+  budget();
+
+  const anns = ANNS.map(([ti, b, u, pin]) => u !== "each" ? [tr(ti), tr(b), u, pin] : [`${tr(SHORT[UNIT ?? 0])}: ${tr(ti)}`, tr(b), UNIT ?? 0, false]);
+  $("anns").innerHTML = anns.filter(a => mine(a[2])).map(([ti, b, , pin]) =>
+    `<div class="ann${pin ? " pin" : ""}">${pin ? `<div class="tag">${t("pinned")}</div>` : ""}<b>${ti}</b><p class="muted">${b}</p></div>`).join("");
+
+  const todos = TODOS.filter(x => mine(x[1])).slice(0, UNIT === null ? 5 : 4).map(([ti, u, d, done]) => [tr(ti), u, short(day(d)), done]);
+  const renderTodos = () => $("todos").innerHTML = todos.map((x, i) => `<label class="todo${x[3] ? " done" : ""}"><input type="checkbox" data-t="${i}"${x[3] ? " checked" : ""}>` +
+    `<div><div class="tx">${esc(x[0])}</div><div class="meta">${x[1] === null ? t("company") : tr(SHORT[x[1]])}, ${x[2]}</div></div></label>`).join("");
+  $("todos").addEventListener("change", e => { todos[+e.target.dataset.t][3] = e.target.checked; renderTodos(); });
+  $("addtodo").addEventListener("submit", e => {
+    e.preventDefault();
+    const inp = e.target.querySelector("input");
+    if (inp.value.trim()) { todos.unshift([inp.value.trim(), UNIT, t("today"), false]); inp.value = ""; renderTodos(); }
+  });
+  renderTodos();
+
+  const people = UNIT === null ? [0, 2, 6].map(i => [HEADS[i], tr(DEPTS[i])])
+                               : [[HEADS[UNIT], t("headRole")], [LEADS[UNIT], t("leadRole")]];
+  if (UNIT !== null) $("pptitle").textContent = t("team");
+  $("people").innerHTML = people.map(([nm, r]) =>
+    `<div class="pp"><span class="av">${initials(nm)}</span><div><b>${nm}</b><p class="muted">${r}</p></div></div>`).join("");
+}
+
+// ---------- calendar ----------
+function calendar() {
+  let cur = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1), view = "month", selected = null, slide = "";
+  const hidden = new Set();
+  const visible = e => mine(e[1]) && !hidden.has(e[1] === null ? "C" : e[1]);
+  const dayEvents = d => EVENTS.filter(e => visible(e) && (e[3] ? e[2] <= d && d <= e[3] : e[2] === d));  // multi-day = a pill on every day
+  const dshort = s => +s.slice(8);
+  const tipHTML = e => `<b>${tr(e[0])}</b>${dshort(e[2])}${e[3] ? "–" + dshort(e[3]) : ""} ${tr(MONTHS[+e[2].slice(5, 7) - 1])}, ${tr(e[4])}<br>${tr(e[5])}<br><span class="muted">${e[1] === null ? t("wholeCompany") : tr(DEPTS[e[1]])}</span>`;
+
+  function render() {
+    const y = cur.getFullYear(), m = cur.getMonth();
+    const chips = UNIT === null ? [["C", t("company"), ORG_COL], ...SHORT.map((s, i) => [i, tr(s), UCOL[i]])]
+                                : [["C", t("company"), ORG_COL], [UNIT, tr(SHORT[UNIT]), UCOL[UNIT]]];
+    let h = `<div class="toolbar"><div class="nav"><button class="nb" data-go="-1" aria-label="Previous month">←</button><button class="nb" data-go="0">${t("today")}</button>` +
+      `<span class="ctitle">${view === "agenda" ? t("upcoming") : tr(MONTHS[m]) + " " + y}</span><button class="nb" data-go="1" aria-label="Next month">→</button></div>` +
+      `<div class="views">${[["month", t("month")], ["agenda", t("list")]].map(([v, l]) => `<button data-view="${v}" class="${view === v ? "on" : ""}">${l}</button>`).join("")}</div></div>` +
+      `<div class="filters">${chips.map(([k, l, c]) => `<button class="chip${hidden.has(k) ? " off" : ""}" data-f="${k}"><i style="background:${c}"></i>${l}</button>`).join("")}</div>`;
+
+    if (view === "agenda") {
+      const up = EVENTS.filter(e => visible(e) && (e[3] || e[2]) >= ds(TODAY)).sort((a, b) => a[2].localeCompare(b[2]));
+      let last = "";
+      h += `<div class="agenda">` + up.map(e => {
+        const d = new Date(e[2] + "T00:00");
+        const head = e[2] !== last ? `<div class="ag-d">${d.getDate()} ${tr(MONTHS[d.getMonth()])}</div>` : "";
+        last = e[2];
+        return head + `<div class="ag-e" data-ev="${EVENTS.indexOf(e)}"><span class="dot" style="background:${col(e[1])}"></span><span class="tm">${tr(e[4])}</span><b>${tr(e[0])}</b><span class="muted">${tr(e[5])}</span></div>`;
+      }).join("") + `</div>`;
+    } else {
+      h += `<div class="grid ${slide}"><div class="dows">${DOWS.map(d => `<div class="dow">${tr(d)}</div>`).join("")}</div>`;
+      const start = new Date(y, m, 1 - (new Date(y, m, 1).getDay() + 6) % 7);
+      for (let r = 0; r < 6; r++) {
+        const rs = new Date(start); rs.setDate(start.getDate() + r * 7);
+        if (r > 3 && rs.getMonth() !== m) break;
+        h += `<div class="week">`;
+        for (let c = 0; c < 7; c++) {
+          const d = new Date(rs); d.setDate(rs.getDate() + c);
+          const key = ds(d), evs = dayEvents(key), max = evs.length > 2 ? 1 : 2;
+          h += `<div class="day${d.getMonth() !== m ? " out" : ""}${+d === +TODAY ? " today" : ""}${key === selected ? " sel" : ""}" data-day="${key}"><span class="dn">${d.getDate()}</span><div class="evs">` +
+            evs.slice(0, max).map(e => `<div class="er" data-ev="${EVENTS.indexOf(e)}"><span class="dot" style="background:${col(e[1])}"></span><span class="nm">${tr(e[0])}</span></div>`).join("") +
+            (evs.length > max ? `<div class="more">+${evs.length - max} ${t("more")}</div>` : "") + `</div></div>`;
+        }
+        h += `</div>`;
+      }
+      h += `</div>`;
+      if (selected) {
+        const evs = dayEvents(selected);
+        const d = new Date(selected + "T00:00");
+        h += `<div class="daypanel"><b>${d.getDate()} ${tr(MONTHS[d.getMonth()])}</b>` + (evs.length
+          ? evs.map(e => `<span class="it"><span class="st" style="background:${col(e[1])}"></span>${tr(e[4])}, ${tr(e[0])}</span>`).join("")
+          : `<span class="muted">${t("noEvents")}</span>`) + `</div>`;
+      }
+    }
+    $("calcard").innerHTML = h;
+    slide = "";
+  }
+  $("calcard").addEventListener("click", ev => {
+    const el = ev.target.closest("[data-go],[data-view],[data-f],[data-day]");
+    if (!el) return;
+    if (el.dataset.go !== undefined) {
+      const g = +el.dataset.go;
+      if (g === 0) { cur = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1); selected = ds(TODAY); }
+      else { cur = new Date(cur.getFullYear(), cur.getMonth() + g, 1); slide = g > 0 ? "slide-r" : "slide-l"; }
+    } else if (el.dataset.view) view = el.dataset.view;
+    else if (el.dataset.f !== undefined) { const k = el.dataset.f === "C" ? "C" : +el.dataset.f; hidden.has(k) ? hidden.delete(k) : hidden.add(k); }
+    else if (el.dataset.day) selected = selected === el.dataset.day ? null : el.dataset.day;
+    render();
+  });
+  render();
+
+  // one floating tooltip for every event (calendar rows and agenda)
+  const tip = $("tip");
+  document.addEventListener("mouseover", ev => {
+    const el = ev.target.closest("[data-ev]");
+    if (!el) { tip.style.display = "none"; return; }
+    tip.innerHTML = tipHTML(EVENTS[+el.dataset.ev]);
+    const r = el.getBoundingClientRect();
+    tip.style.display = "block";
+    tip.style.left = Math.min(r.left, innerWidth - 245) + "px";
+    tip.style.top = (r.bottom + 120 > innerHeight ? r.top - tip.offsetHeight - 6 : r.bottom + 6) + "px";
+  });
+}
+
+// ---------- budget donut ----------
+function budget() {
+  const COLS = ["#9fe3d3", "#f2b33d", "#3aa7e6", "#e7b8dc", "#6fc1ae", "#c58f2a", "#2a7fb0", "#b98aae", "#4d8f80"];
+  const list = NEEDS.filter(n => own(n[1])).sort((a, b) => b[2] - a[2]);
+  const got = list.reduce((s, n) => s + n[2], 0), need = list.reduce((s, n) => s + n[3], 0);
+  const withMoney = list.filter(n => n[2] > 0);
+  const R = 70, C = 2 * Math.PI * R, GAP = withMoney.length > 1 ? 3 : 0;
+  let off = 0, segs = "";
+  withMoney.forEach((n, i) => {
+    const len = n[2] / got * C;
+    segs += `<circle class="seg" data-n="${i}" r="${R}" cx="95" cy="95" stroke="${COLS[i % COLS.length]}" stroke-dasharray="${Math.max(0, len - GAP)} ${C}" stroke-dashoffset="${-off}"></circle>`;
+    off += len;
+  });
+  const status = n => n[2] >= n[3] ? "bought" : n[2] > 0 ? "collecting" : "needed";
+  const midDefault = `<b>${need ? Math.round(got * 100 / need) : 0}%</b><span>${t("funded")}</span>`;
+  $("budget").innerHTML = `<h2>${t("budget")}</h2><p class="sub">${t("budgetSub")}</p>` +
+    `<div class="total"><b>${CUR}${fmt(got)} <small>/ ${CUR}${fmt(need)}</small></b><span>${t("fundedOf")}</span></div>` +
+    `<div class="donut"><svg viewBox="0 0 190 190"><circle r="${R}" cx="95" cy="95" fill="none" stroke="#1b1c22" stroke-width="28"></circle>${segs}</svg>` +
+    `<div class="mid" id="mid">${midDefault}</div></div>` +
+    `<div class="blist">${list.map(n => {
+        const i = withMoney.indexOf(n);
+        return `<div class="brow"><span class="dot" style="background:${i >= 0 ? COLS[i % COLS.length] : "#393a45"}"></span>` +
+          `<span class="nm">${esc(tr(n[0]))}</span><span class="am">${fmt(n[2])} / ${fmt(n[3])}</span><span class="st ${status(n)}"></span></div>`;
+      }).join("")}</div>` +
+    `<form class="addreq" id="addreq" hidden><input class="inp" name="t" placeholder="${t("reqName")}" required>` +
+    `<input class="inp" name="a" type="number" min="1" placeholder="${t("amount")}" required><button class="nb" type="submit">${t("add")}</button></form>` +
+    `<button class="btn" id="reqbtn">+ ${t("addReq")}</button>`;
+  $("reqbtn").onclick = () => { $("addreq").hidden = false; $("reqbtn").hidden = true; $("addreq").t.focus(); };
+  $("addreq").onsubmit = e => {
+    e.preventDefault();
+    NEEDS.push([e.target.t.value.trim(), UNIT, 0, +e.target.a.value]);
+    budget();
+  };
+  document.querySelectorAll(".seg").forEach(s => {
+    s.addEventListener("mouseenter", () => {
+      const n = withMoney[+s.dataset.n];
+      $("mid").innerHTML = `<b>${esc(tr(n[0]))}</b><span>${CUR}${fmt(n[2])} (${(n[2] * 100 / got).toFixed(1)}%)</span>`;
+    });
+    s.addEventListener("mouseleave", () => $("mid").innerHTML = midDefault);
+  });
+}
+
+// =====================================================================
+// Candidates: an interview scorecard that replaces the usual spreadsheet. Kept in this browser only.
+function candidatesPage() {
+  document.title = `${t("candidates")} · TeamDesk`;
+  const SKILLS = { comm: ["Communication", "კომუნიკაცია"], prob: ["Problem solving", "პრობლემების გადაჭრა"], sql: "SQL", py: "Python",
+    cust: ["Customer focus", "მომხმარებელზე ორიენტაცია"], lead: ["Leadership", "ლიდერობა"], team: ["Teamwork", "გუნდური მუშაობა"],
+    own: ["Ownership", "პასუხისმგებლობა"], xls: "Excel", neg: ["Negotiation", "მოლაპარაკება"], eng: ["English", "ინგლისური"],
+    stress: ["Stress management", "სტრესის მართვა"] };
+  const RATINGS = [["Technical", "ტექნიკური"], ["Communication", "კომუნიკაცია"], ["Teamwork", "გუნდური მუშაობა"], ["Initiative", "ინიციატივა"], ["Values fit", "ღირებულებები"]];
+  const POT = { yes: ["Strong hire", "ძლიერი კანდიდატი"], maybe: ["Maybe", "შესაძლოა"], no: ["Not now", "ჯერ არა"] };
+  const sk = k => tr(SKILLS[k] ?? k);
+  let editing = null, q = "", fPot = "", fUnit = UNIT === null ? "" : String(UNIT);
+  const blank = () => ({ first: "", last: "", exp: "", phone: "", unit: UNIT ?? "", good: [], lack: [], r: [3, 3, 3, 3, 3], pot: "maybe", notes: "", by: "Alex Morgan", date: ds(TODAY) });
+  let cur = blank();
+
+  $("main").innerHTML = `<section class="rgrid">
+    <div class="card rlist"><h2>${t("candidates")}</h2><p class="sub">${t("autumn")}, <span id="count"></span></p>
+      <div class="rtools"><input class="inp" id="q" placeholder="${t("search")}">
+        <select class="inp" id="fpot" style="flex:0 0 190px"><option value="">${t("allRec")}</option>${Object.entries(POT).map(([k, v]) => `<option value="${k}">${tr(v)}</option>`).join("")}</select>
+        <select class="inp" id="funit" style="flex:0 0 190px"><option value="">${t("allDept")}</option>${SHORT.map((s, i) => `<option value="${i}">${tr(s)}</option>`).join("")}</select>
+        <button class="btn ghost" id="csv" style="margin:0">${svg('<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>')}CSV</button></div>
+      <div class="tbl"><table><thead><tr><th>${t("name")}</th><th>${t("dept")}</th><th>${t("strGaps")}</th><th>${t("rec")}</th><th>${t("scores")}</th></tr></thead><tbody id="rows"></tbody></table></div>
+    </div>
+    <div class="card form" id="form"></div></section>`;
+
+  function rows() {
+    const list = recs.filter(r => (!fPot || r.pot === fPot) && (fUnit === "" || String(r.unit) === fUnit) &&
+      (!q || [r.first, r.last, ...r.good.map(sk), ...r.lack.map(sk), r.notes].join(" ").toLowerCase().includes(q)));
+    $("count").textContent = `${recs.length} ${t("records")}`;
+    $("rows").innerHTML = list.map(r => {
+      const i = recs.indexOf(r);
+      return `<tr class="r${editing === i ? " on" : ""}" data-i="${i}"><td><b>${esc(r.first)} ${esc(r.last)}</b><div class="muted" style="font-size:11.5px">${r.exp === "" ? "" : r.exp + " " + (LANG === "ka" ? "წ." : r.exp === 1 ? "yr" : "yrs")}</div></td>` +
+        `<td>${r.unit === "" ? '<span class="muted">—</span>' : tr(SHORT[r.unit])}</td>` +
+        `<td><div class="tags">${r.good.map(g => `<span class="tg good">${esc(sk(g))}</span>`).join("")}${r.lack.map(g => `<span class="tg lack">${esc(sk(g))}</span>`).join("")}</div></td>` +
+        `<td><span class="pot ${r.pot}">${tr(POT[r.pot])}</span></td>` +
+        `<td><div class="mini" title="${RATINGS.map((n, k) => tr(n) + ": " + r.r[k]).join(", ")}">${r.r.map(v => `<i style="height:${v * 20}%"></i>`).join("")}</div></td></tr>`;
+    }).join("") || `<tr><td colspan="5" class="muted">${t("noMatch")}</td></tr>`;
+  }
+
+  function form() {
+    const picks = kind => Object.keys(SKILLS).map(s => `<button type="button" class="pick ${kind}${cur[kind].includes(s) ? " on" : ""}" data-k="${kind}" data-s="${s}">${sk(s)}</button>`).join("");
+    $("form").innerHTML = `<h2>${editing === null ? t("newCand") : t("editCand")}</h2>
+      <form id="rf">
+      <div class="f2"><div><label class="fl" for="f-first">${t("first")}</label><input class="inp" id="f-first" name="first" value="${esc(cur.first)}" required></div>
+        <div><label class="fl" for="f-last">${t("last")}</label><input class="inp" id="f-last" name="last" value="${esc(cur.last)}" required></div>
+        <div><label class="fl" for="f-exp">${t("exp")}</label><input class="inp" id="f-exp" name="exp" type="number" min="0" max="50" value="${cur.exp}"></div>
+        <div><label class="fl" for="f-phone">${t("phone")}</label><input class="inp" id="f-phone" name="phone" value="${esc(cur.phone)}"></div></div>
+      <label class="fl" for="f-unit">${t("appliedFor")}</label><select class="inp" id="f-unit" name="unit"><option value="">—</option>${SHORT.map((s, i) => `<option value="${i}"${String(cur.unit) === String(i) ? " selected" : ""}>${tr(DEPTS[i])}</option>`).join("")}</select>
+      <label class="fl">${t("strengths")}</label><div class="picks">${picks("good")}</div>
+      <label class="fl">${t("gaps")}</label><div class="picks">${picks("lack")}</div>
+      <label class="fl">${t("rating")}</label>${RATINGS.map((n, k) => `<div class="rate"><span>${tr(n)}</span><input type="range" min="1" max="5" value="${cur.r[k]}" data-r="${k}" aria-label="${tr(n)}"><b id="rv${k}">${cur.r[k]}</b></div>`).join("")}
+      <label class="fl">${t("rec")}</label><div class="seg3">${Object.entries(POT).map(([k, v]) => `<button type="button" data-pot="${k}" class="${cur.pot === k ? "on" : ""}">${tr(v)}</button>`).join("")}</div>
+      <label class="fl" for="f-notes">${t("notes")}</label><textarea class="inp" id="f-notes" name="notes" placeholder="${t("notesPh")}">${esc(cur.notes)}</textarea>
+      <div class="f2"><div><label class="fl" for="f-by">${t("interviewer")}</label><input class="inp" id="f-by" name="by" value="${esc(cur.by)}"></div>
+        <div><label class="fl" for="f-date">${t("date")}</label><input class="inp" id="f-date" name="date" type="date" value="${cur.date}"></div></div>
+      <div class="factions"><button class="btn" type="submit">${t("save")}</button>${editing !== null ? `<button class="btn ghost" type="button" id="cancel">${t("cancel")}</button>` : ""}<span class="saved" id="saved"></span></div>
+      </form>`;
+  }
+
+  $("form").addEventListener("click", e => {
+    const p = e.target.closest(".pick"), pot = e.target.closest("[data-pot]");
+    if (p) { const arr = cur[p.dataset.k], s = p.dataset.s; arr.includes(s) ? arr.splice(arr.indexOf(s), 1) : arr.push(s); p.classList.toggle("on"); }
+    if (pot) { cur.pot = pot.dataset.pot; $("form").querySelectorAll("[data-pot]").forEach(b => b.classList.toggle("on", b === pot)); }
+    if (e.target.id === "cancel") { editing = null; cur = blank(); form(); rows(); }
+  });
+  $("form").addEventListener("input", e => {
+    if (e.target.dataset.r !== undefined) { cur.r[+e.target.dataset.r] = +e.target.value; $("rv" + e.target.dataset.r).textContent = e.target.value; }
+  });
+  $("form").addEventListener("submit", e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    for (const k of ["first", "last", "phone", "notes", "by", "date"]) cur[k] = fd.get(k).trim();
+    cur.exp = fd.get("exp") === "" ? "" : +fd.get("exp");
+    cur.unit = fd.get("unit") === "" ? "" : +fd.get("unit");
+    if (editing === null) recs.unshift(cur); else recs[editing] = cur;
+    saveRecs(); editing = null; cur = blank(); form(); rows();
+    $("saved").textContent = t("saved");
+  });
+  $("rows").addEventListener("click", e => {
+    const tr_ = e.target.closest("tr.r");
+    if (!tr_) return;
+    editing = +tr_.dataset.i; cur = JSON.parse(JSON.stringify(recs[editing])); form(); rows();
+  });
+  $("q").addEventListener("input", e => { q = e.target.value.toLowerCase(); rows(); });
+  $("fpot").addEventListener("change", e => { fPot = e.target.value; rows(); });
+  $("funit").addEventListener("change", e => { fUnit = e.target.value; rows(); });
+  $("csv").addEventListener("click", () => {   // for whoever still wants a spreadsheet
+    const head = [t("first"), t("last"), t("exp"), t("phone"), t("dept"), t("strengths"), t("gaps"), ...RATINGS.map(tr), t("rec"), t("notes"), t("interviewer"), t("date")];
+    const lines = [head, ...recs.map(r => [r.first, r.last, r.exp, r.phone, r.unit === "" ? "" : tr(DEPTS[r.unit]), r.good.map(sk).join("; "), r.lack.map(sk).join("; "), ...r.r, tr(POT[r.pot]), r.notes, r.by, r.date])]
+      .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + lines.join("\n")], { type: "text/csv" }));
+    a.download = "candidates.csv"; a.click();
+  });
+  $("funit").value = fUnit;
+  form(); rows();
+}
+</script>
+</body></html>
